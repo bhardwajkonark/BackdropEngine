@@ -1,6 +1,6 @@
 import React from 'react';
-// @ts-ignore: Local package import for demo purposes
-import { useWebcamBackgroundSwitcher } from 'cyberpoint-video-solution4.0';
+// @ts-ignore: Local symlinked package for demo purposes
+import { useWebcamBackgroundSwitcher } from 'webcam-bg-switcher';
 
 const backgrounds = [
   { label: 'Blur', type: 'blur' as const },
@@ -21,7 +21,16 @@ function App() {
     backgrounds,
     width: 640,
     height: 480,
-    onError: (err: Error) => console.error(err),
+    onError: (err: Error | { type: string; message: string }) => {
+      if ('message' in err) {
+        console.error(err.message);
+      } else {
+        console.error(err);
+      }
+    },
+    debug: false,
+    frameSkip: 1,
+    blurRadius: 10,
   });
 
   return (
@@ -47,7 +56,7 @@ function App() {
         ))}
       </div>
       <div style={{ position: 'relative', width: 640, height: 480, border: '1px solid #ccc', borderRadius: 8 }}>
-        <video ref={videoRef} style={{ display: 'none' }} />
+        <video ref={videoRef} style={{ display: 'none' }} autoPlay muted playsInline />
         <canvas ref={canvasRef} width={640} height={480} style={{ width: '100%', height: '100%' }} />
         {status === 'loading' && (
           <div style={{

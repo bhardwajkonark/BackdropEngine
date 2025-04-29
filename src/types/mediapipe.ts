@@ -16,6 +16,7 @@ export const DEFAULT_MEDIAPIPE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/se
 export interface MediaPipeLoaderOptions {
     cdnUrl?: string; // Base URL for MediaPipe scripts (default: DEFAULT_MEDIAPIPE_CDN)
     modelSelection?: MediaPipeModelSelection;
+    debug?: boolean;
 }
 
 // Extend the Window interface to include SelfieSegmentation for type safety

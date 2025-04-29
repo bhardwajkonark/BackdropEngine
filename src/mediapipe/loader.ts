@@ -11,6 +11,8 @@ export class MediaPipeLoader {
     private isLoaded = false;
     private loadError: Error | null = null;
     private cdnUrl: string;
+    private lastResults: any = {};
+    private onResultsFrameCount = 0;
 
     constructor(private options: MediaPipeLoaderOptions) {
         // Use default CDN if not provided
@@ -27,6 +29,14 @@ export class MediaPipeLoader {
             const SelfieSegmentation = window.SelfieSegmentation || (await this.loadScript(this.cdnUrl));
             this.selfieSegmentation = new SelfieSegmentation({
                 locateFile: (file: string) => `${this.cdnUrl}/${file}`,
+            });
+            // Set onResults callback
+            this.selfieSegmentation.onResults((results: any) => {
+                this.lastResults = results;
+                this.onResultsFrameCount = (this.onResultsFrameCount + 1) % 30;
+                if (this.options.debug && this.onResultsFrameCount === 0) {
+                    console.log('[WebcamBG Debug] MediaPipe onResults:', results);
+                }
             });
             this.setModelSelection(this.options.modelSelection || 0);
             this.isLoaded = true;
@@ -50,6 +60,8 @@ export class MediaPipeLoader {
      */
     getInstance() {
         if (!this.isLoaded) throw new Error('MediaPipe not loaded');
+        // Attach lastResults to the instance for compatibility
+        this.selfieSegmentation.lastResults = this.lastResults;
         return this.selfieSegmentation;
     }
 

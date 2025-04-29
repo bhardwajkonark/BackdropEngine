@@ -52,6 +52,7 @@ function MyCustomUI() {
     width: 640,
     height: 480,
     onError: (err) => console.error(err),
+    frameSkip: 2,
   });
 
   return (
@@ -63,7 +64,7 @@ function MyCustomUI() {
         </button>
       ))}
       {/* Attach refs to your elements */}
-      <video ref={videoRef} style={{ display: "none" }} />
+      <video ref={videoRef} style={{ display: "none" }} autoPlay muted playsInline />
       <canvas ref={canvasRef} width={640} height={480} />
       {status === "error" && <div>Error: {error?.message}</div>}
     </div>
@@ -93,6 +94,7 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 | height      | number   | Video/canvas height (default: 480)                |
 | onError     | function | Callback for errors (webcam, image, segmentation) |
 | defaultMode | string   | Initial background mode ('blur' or image label)   |
+| frameSkip   | number   | Process every Nth frame (default: 1, no skipping) |
 
 #### Returns
 
@@ -178,9 +180,9 @@ To maximize real-time performance and efficiency, consider implementing or enabl
 
 ### 1. Frame Skipping
 
-- **Description:** Process only every Nth frame for segmentation (e.g., every 2nd frame).
+- **Description:** Process only every Nth frame for segmentation (e.g., every 2nd frame) using the `frameSkip` option.
 - **Benefit:** Reduces CPU/GPU load and segmentation calls, increasing FPS and lowering resource usage.
-- **How to Use:** Add a frame counter and only run segmentation logic on selected frames.
+- **How to Use:** Set `frameSkip` in your hook options. For example, `frameSkip: 2` will process every other frame.
 
 ### 2. Model Selection
 
@@ -246,5 +248,36 @@ const loader = new MediaPipeLoader({
 ```
 
 If `cdnUrl` is not provided, the loader will use the default CDN automatically.
+
+---
+
+## Video Playback: React/SPA Best Practices
+
+For robust cross-browser playback, always:
+
+- Set `autoPlay`, `muted`, and `playsInline` on your `<video>` element.
+- Explicitly call `.play()` on the video element after setting `srcObject` in your code. This ensures the video is playing and frames are available for compositing, even if the video is hidden or autoplay is blocked by the browser.
+
+Example:
+
+```js
+if (videoRef.current) {
+  videoRef.current.srcObject = stream;
+  videoRef.current.play().catch(() => {});
+}
+```
+
+This is more robust than relying on autoplay alone, especially in React or SPA environments.
+
+---
+
+## Troubleshooting: Blank or Black Canvas
+
+- **If your canvas is blank or black:**
+  - Ensure your video element is playing (see above).
+  - Make sure you set `autoPlay`, `muted`, and `playsInline` on the video element.
+  - Always call `.play()` after setting `srcObject`.
+  - The video can be hidden (`display: none`), but it must be playing.
+  - Check the browser console for warnings about video playback or permissions.
 
 ---
