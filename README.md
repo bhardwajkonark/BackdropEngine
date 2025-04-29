@@ -310,3 +310,61 @@ if (!window.Camera) {
   - If you see errors about `Camera` not being found, ensure you are not importing from `@mediapipe/camera_utils` and let the hook dynamically load the script as described above.
 
 ---
+
+## Using Local File Uploads as Backgrounds
+
+You can let users upload their own images and use them as backgrounds. Simply create a Blob URL from the uploaded file and pass it as the `src` in your background option.
+
+### Example: Plain JS (Vanilla)
+
+```js
+// HTML:
+// <input type="file" id="bgUpload" />
+
+document.getElementById('bgUpload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const url = URL.createObjectURL(file);
+    // Add to your backgrounds array
+    backgrounds.push({ label: file.name, type: 'image', src: url });
+    // Update your UI and re-render as needed
+  }
+});
+```
+
+### Example: React
+
+```jsx
+import React, { useRef } from 'react';
+import { useWebcamBackgroundSwitcher } from 'react-webcam-bg-switcher';
+
+function MyComponent() {
+  const fileInputRef = useRef();
+  const [backgrounds, setBackgrounds] = React.useState([
+    { label: 'Blur', type: 'blur' },
+    // ...other backgrounds
+  ]);
+  const { setBackground, ...rest } = useWebcamBackgroundSwitcher({ backgrounds });
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      const bg = { label: file.name, type: 'image', src: url };
+      setBackgrounds((prev) => [...prev, bg]);
+      setBackground(bg);
+    }
+  };
+
+  return (
+    <div>
+      <input type="file" ref={fileInputRef} onChange={handleFileChange} />
+      {/* ...rest of your UI */}
+    </div>
+  );
+}
+```
+
+**Note:** The package will automatically load the image from the Blob URL and use it as a background.
+
+---

@@ -1,11 +1,10 @@
 import React from 'react';
 // @ts-ignore: Local symlinked package for demo purposes
 import { useWebcamBackgroundSwitcher } from 'webcam-bg-switcher';
-
 const backgrounds = [
   { label: 'Blur', type: 'blur' as const },
   { label: 'Beach', type: 'image' as const, src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80' },
-  { label: 'Mountains', type: 'image' as const, src: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Office', type: 'image' as const, src: '/office.jpg' },
 ];
 
 function App() {

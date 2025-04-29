@@ -8,6 +8,9 @@ export interface CompositingOptions {
     debugMode?: 'video' | 'mask' | 'temp' | undefined; // Add debug mode
 }
 
+// Reusable offscreen canvas for compositing
+let reusableTempCanvas: HTMLCanvasElement | null = null;
+
 /**
  * Composites the person (from segmentation mask) with the chosen background on the output canvas.
  * - Supports 'blur' and 'image' modes.
@@ -92,13 +95,17 @@ export function compositeFrame({
     }
 
     // Step 2: Overlay the person (using mask)
-    // Use an offscreen canvas for compositing
-    const tempCanvas = document.createElement('canvas');
+    // Use a reusable offscreen canvas for compositing
+    if (!reusableTempCanvas) {
+        reusableTempCanvas = document.createElement('canvas');
+    }
+    const tempCanvas = reusableTempCanvas;
     tempCanvas.width = width;
     tempCanvas.height = height;
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) throw new Error('No 2D context on temp canvas');
 
+    tempCtx.clearRect(0, 0, width, height);
     tempCtx.drawImage(inputImage, 0, 0, width, height);
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.drawImage(segmentationMask, 0, 0, width, height);
