@@ -10,6 +10,34 @@ export interface CompositingOptions {
 
 // Reusable offscreen canvas for compositing
 let reusableTempCanvas: HTMLCanvasElement | null = null;
+// Reusable conversion canvas for ImageBitmap to Canvas (for Firefox)
+let reusableBitmapToCanvas: HTMLCanvasElement | null = null;
+
+// Utility: Detect if running in Firefox
+function isFirefox() {
+    return typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+}
+
+// Utility: Convert ImageBitmap to Canvas (for Firefox optimization)
+let hasLoggedBitmapToCanvas = false;
+function imageBitmapToCanvas(bitmap: ImageBitmap): HTMLCanvasElement {
+    if (!reusableBitmapToCanvas) {
+        reusableBitmapToCanvas = document.createElement('canvas');
+    }
+    reusableBitmapToCanvas.width = bitmap.width;
+    reusableBitmapToCanvas.height = bitmap.height;
+    const ctx = reusableBitmapToCanvas.getContext('2d');
+    if (ctx) {
+        ctx.clearRect(0, 0, bitmap.width, bitmap.height);
+        ctx.drawImage(bitmap, 0, 0);
+    }
+    if (!hasLoggedBitmapToCanvas) {
+        // eslint-disable-next-line no-console
+        console.log('[WebcamBG Debug] Using Firefox ImageBitmap-to-Canvas optimization.');
+        hasLoggedBitmapToCanvas = true;
+    }
+    return reusableBitmapToCanvas;
+}
 
 /**
  * Composites the person (from segmentation mask) with the chosen background on the output canvas.
@@ -49,6 +77,11 @@ export function compositeFrame({
 
     // Defensive: check segmentationMask
     let maskWidth = 0, maskHeight = 0;
+    let maskToUse: CanvasImageSource = segmentationMask;
+    // Firefox optimization: convert ImageBitmap to Canvas
+    if (isFirefox() && segmentationMask instanceof window.ImageBitmap) {
+        maskToUse = imageBitmapToCanvas(segmentationMask);
+    }
     if (segmentationMask instanceof HTMLVideoElement) {
         maskWidth = segmentationMask.videoWidth;
         maskHeight = segmentationMask.videoHeight;
@@ -70,7 +103,7 @@ export function compositeFrame({
     // Debug: draw only mask
     if (options.debugMode === 'mask') {
         ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(segmentationMask, 0, 0, width, height);
+        ctx.drawImage(maskToUse, 0, 0, width, height);
         return;
     }
 
@@ -108,7 +141,7 @@ export function compositeFrame({
     tempCtx.clearRect(0, 0, width, height);
     tempCtx.drawImage(inputImage, 0, 0, width, height);
     tempCtx.globalCompositeOperation = 'destination-in';
-    tempCtx.drawImage(segmentationMask, 0, 0, width, height);
+    tempCtx.drawImage(maskToUse, 0, 0, width, height);
     tempCtx.globalCompositeOperation = 'source-over';
 
     // Debug: draw only temp composited canvas

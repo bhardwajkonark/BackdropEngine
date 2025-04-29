@@ -3,8 +3,17 @@ import React from 'react';
 import { useWebcamBackgroundSwitcher } from 'webcam-bg-switcher';
 const backgrounds = [
   { label: 'Blur', type: 'blur' as const },
-  { label: 'Beach', type: 'image' as const, src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80' },
   { label: 'Office', type: 'image' as const, src: '/office.jpg' },
+  { label: 'Office Green', type: 'image' as const, src: '/office-green.jpg' },
+  //add more from unsplash
+  { label: 'Beach', type: 'image' as const, src: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Mountains', type: 'image' as const, src: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Forest', type: 'image' as const, src: 'https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Desert', type: 'image' as const, src: 'https://images.unsplash.com/photo-1595124028480-cdfd7be7b85d?auto=format&fit=crop&w=800&q=80' },
+  { label: 'River', type: 'image' as const, src: 'https://images.unsplash.com/photo-1593132808462-578ca7a387d9?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Sky', type: 'image' as const, src: 'https://images.unsplash.com/photo-1470434158598-88e7ad324132?auto=format&fit=crop&w=800&q=80' },
+  { label: 'Sunset', type: 'image' as const, src: 'https://images.unsplash.com/photo-1503803548695-c2a7b4a5b875?auto=format&fit=crop&w=800&q=80' },
+
 ];
 
 function App() {

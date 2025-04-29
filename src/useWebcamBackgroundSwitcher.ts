@@ -54,6 +54,10 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
     const mediapipeLoaderRef = useRef<MediaPipeLoader | null>(null);
     const animationFrameRef = useRef<number | undefined>(undefined);
 
+    // Debounce ref for background changes
+    const lastBgChangeRef = useRef<number>(0);
+    const BG_CHANGE_DEBOUNCE_MS = 300;
+
     // Preload backgrounds on mount or when options.backgrounds changes
     useEffect(() => {
         if (options.debug) {
@@ -209,6 +213,14 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
         if (options.debug) {
             console.log('[WebcamBG Debug] setBackground called:', bg);
         }
+        const now = Date.now();
+        if (now - lastBgChangeRef.current < BG_CHANGE_DEBOUNCE_MS) {
+            if (options.debug) {
+                console.warn('[WebcamBG Debug] Background change debounced.');
+            }
+            return;
+        }
+        lastBgChangeRef.current = now;
         setCurrentBackground(bg);
     }, [options.debug]);
     const setModel = useCallback((model: 0 | 1) => {
