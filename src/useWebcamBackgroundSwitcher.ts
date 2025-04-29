@@ -18,6 +18,20 @@ export interface UseWebcamBackgroundSwitcherOptions {
     frameSkip?: number;
 }
 
+// Utility to dynamically load the MediaPipe camera_utils script
+async function loadCameraUtilsScript(): Promise<void> {
+    if (typeof window === 'undefined') return;
+    if ((window as any).Camera) return;
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load MediaPipe camera_utils.js'));
+        document.head.appendChild(script);
+    });
+}
+
 export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcherOptions) {
     if (options.debug) {
         console.log('[WebcamBG Debug] Hook initialized with options:', options);
@@ -124,80 +138,71 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
         };
     }, [options.cdnUrl, modelSelection]);
 
-    // Compositing loop
+    // Compositing loop (replaced with MediaPipe Camera utility)
     useEffect(() => {
         if (options.debug) {
             console.log('[WebcamBG Debug] Compositing effect triggered. Status:', status, 'Current background:', currentBackground, 'Blur radius:', blurRadius, 'Mirror:', mirror);
         }
         if (status !== 'ready' || !videoRef.current || !canvasRef.current || !currentBackground) return;
+        let camera: any = null;
         let stopped = false;
         const loader = mediapipeLoaderRef.current;
         const video = videoRef.current;
         const canvas = canvasRef.current;
         const bg = currentBackground;
-        let frameCount = 0;
         const frameSkip = options.frameSkip ?? 1;
-        const runFrame = async () => {
-            if (stopped) return;
-            try {
-                // Only process if video is ready
-                if (video.readyState >= 2 && loader) {
-                    frameCount = (frameCount + 1) % frameSkip;
-                    if (frameCount !== 0) {
-                        animationFrameRef.current = requestAnimationFrame(runFrame);
-                        return;
-                    }
-                    const selfieSegmentation = loader.getInstance();
-                    // Run segmentation
-                    await selfieSegmentation.send({ image: video });
-                    // Get results (assume onResults sets a property)
-                    const results = selfieSegmentation.lastResults || {};
-                    if (results.segmentationMask) {
-                        if (options.debug && frameCount === 0) {
-                            console.log('[WebcamBG Debug] Segmentation mask:', results.segmentationMask);
-                            if (results.segmentationMask instanceof HTMLCanvasElement || results.segmentationMask instanceof HTMLImageElement) {
-                                console.log('[WebcamBG Debug] Segmentation mask size:', results.segmentationMask.width, results.segmentationMask.height);
-                            }
-                            console.log('[WebcamBG Debug] Video element:', video);
-                            console.log('[WebcamBG Debug] Video size:', video.videoWidth, video.videoHeight);
-                            console.log('[WebcamBG Debug] Canvas element:', canvas);
-                            console.log('[WebcamBG Debug] Canvas size:', canvas.width, canvas.height);
-                            console.log('[WebcamBG Debug] Current background:', bg);
-                        }
-                        compositeFrame({
-                            inputImage: video,
-                            segmentationMask: results.segmentationMask,
-                            outputCanvas: canvas,
-                            options: {
-                                mode: bg.option.type,
-                                blurRadius,
-                                backgroundImage: bg.image,
-                                mirror,
-                            },
-                        });
-                    } else if (options.debug && frameCount === 0) {
-                        console.warn('[WebcamBG Debug] No segmentation mask in results:', results);
-                    }
-                }
-            } catch (err: any) {
-                if (options.debug) {
-                    console.error('[WebcamBG Debug] Error in compositing loop:', err);
-                }
-                setError(err);
-                setStatus('error');
-                options.onError?.(err);
+        let frameCount = 0;
+        let cancelled = false;
+        (async () => {
+            await loadCameraUtilsScript();
+            if (cancelled) return;
+            const Camera = (window as any).Camera;
+            if (!Camera) {
+                console.error('[WebcamBG Error] MediaPipe Camera utility not found on window after script load.');
+                return;
             }
-            animationFrameRef.current = requestAnimationFrame(runFrame);
-        };
-        animationFrameRef.current = requestAnimationFrame(runFrame);
+            const selfieSegmentation = loader?.getInstance();
+            selfieSegmentation.onResults((results: any) => {
+                if (stopped) return;
+                if (results.segmentationMask) {
+                    compositeFrame({
+                        inputImage: video,
+                        segmentationMask: results.segmentationMask,
+                        outputCanvas: canvas,
+                        options: {
+                            mode: bg.option.type,
+                            blurRadius,
+                            backgroundImage: bg.image,
+                            mirror,
+                        },
+                    });
+                } else if (options.debug) {
+                    console.warn('[WebcamBG Debug] No segmentation mask in results:', results);
+                }
+            });
+            camera = new Camera(video, {
+                onFrame: async () => {
+                    frameCount = (frameCount + 1) % frameSkip;
+                    if (frameCount !== 0) return;
+                    await selfieSegmentation.send({ image: video });
+                },
+                width: options.width || 640,
+                height: options.height || 480,
+            });
+            camera.start();
+            if (options.debug) {
+                console.log('[WebcamBG Debug] MediaPipe Camera started');
+            }
+        })();
         return () => {
             stopped = true;
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            cancelled = true;
+            if (camera && camera.stop) camera.stop();
             if (options.debug) {
-                console.log('[WebcamBG Debug] Cleanup: compositing effect');
+                console.log('[WebcamBG Debug] Cleanup: MediaPipe Camera effect');
             }
         };
-    }, [status, currentBackground, blurRadius, mirror, options.frameSkip]);
+    }, [status, currentBackground, blurRadius, mirror, options.frameSkip, options.width, options.height]);
 
     // API methods
     const setBackground = useCallback((bg: LoadedBackground) => {

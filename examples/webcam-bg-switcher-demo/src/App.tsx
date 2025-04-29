@@ -29,7 +29,7 @@ function App() {
       }
     },
     debug: false,
-    frameSkip: 1,
+    frameSkip: 2,
     blurRadius: 10,
   });
 

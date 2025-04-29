@@ -271,6 +271,34 @@ This is more robust than relying on autoplay alone, especially in React or SPA e
 
 ---
 
+## Performance: MediaPipe Camera Utility (Dynamic Loading)
+
+For optimal real-time performance, this package uses the [MediaPipe Camera utility](https://google.github.io/mediapipe/solutions/camera.html) to synchronize video capture, segmentation, and compositing—just like the official MediaPipe HTML demos.
+
+- **How it works:**
+  - The hook dynamically loads the `camera_utils.js` script from the CDN at runtime if `window.Camera` is not present.
+  - Once loaded, it uses `window.Camera` to drive the segmentation and compositing pipeline.
+  - This ensures smooth, low-latency output, even on lower-end devices, and matches the performance of the HTML demo.
+- **Why dynamic loading?**
+  - The npm package for `@mediapipe/camera_utils` does not export a usable ES module constructor for `Camera`.
+  - Loading the script from CDN and using `window.Camera` is the most robust and cross-platform solution for React/SPA/SSR environments.
+- **You do not need to import Camera in your code.** The hook handles everything for you.
+
+**If you want to use the Camera utility yourself:**
+
+```js
+// This is handled internally, but for reference:
+if (!window.Camera) {
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+  script.async = true;
+  document.head.appendChild(script);
+}
+// Then use window.Camera as a constructor
+```
+
+---
+
 ## Troubleshooting: Blank or Black Canvas
 
 - **If your canvas is blank or black:**
@@ -279,5 +307,6 @@ This is more robust than relying on autoplay alone, especially in React or SPA e
   - Always call `.play()` after setting `srcObject`.
   - The video can be hidden (`display: none`), but it must be playing.
   - Check the browser console for warnings about video playback or permissions.
+  - If you see errors about `Camera` not being found, ensure you are not importing from `@mediapipe/camera_utils` and let the hook dynamically load the script as described above.
 
 ---
