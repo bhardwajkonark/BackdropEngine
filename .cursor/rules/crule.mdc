@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for webcam-bg-switcher
+
+##Rules
+- Use TypeScript for all source files.
+- All browser-only code must be inside useEffect or equivalent (for SSR safety).
+- Expose only UI-agnostic hooks and utilities from the core package.
+- Write unit tests for all core logic and compositing functions.
+- Document all public APIs and options in the main README.
+- Use Prettier and ESLint for code formatting and linting.
+

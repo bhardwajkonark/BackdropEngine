@@ -1,0 +1,33 @@
+{
+  "name": "webcam-bg-switcher",
+  "version": "1.0.0",
+  "description": "A reusable React hook and utility package for real-time webcam background switching and blurring using [MediaPipe Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html). This package provides the core logic and compositing, allowing you to build your own custom UI in React, Next.js, or any modern frontend framework.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react-hooks": "^8.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.2",
+    "eslint": "^9.25.1",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "jest-environment-jsdom": "^29.7.0",
+    "lint-staged": "^15.5.1",
+    "prettier": "^3.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-test-renderer": "^19.1.0",
+    "ts-jest": "^29.3.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1"
+  }
+}
