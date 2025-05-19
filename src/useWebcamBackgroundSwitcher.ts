@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { WebcamManager, WebcamStatus, WebcamError } from './utils/webcam';
 import { MediaPipeLoader, DEFAULT_MEDIAPIPE_CDN } from './mediapipe/loader';
 import { preloadBackgrounds, BackgroundOption, LoadedBackground } from './utils/backgrounds';
-import { compositeFrame, CompositingOptions, CompositingMode } from './utils/compositor';
+import { compositeFrame } from './utils/compositor';
 
 export interface UseWebcamBackgroundSwitcherOptions {
     backgrounds: BackgroundOption[];

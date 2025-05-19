@@ -1,4 +1,4 @@
-# Project Task List: React Webcam Background Switcher (Core, UI-Agnostic)
+# Project Task List: BackdropEngine (Core, UI-Agnostic)
 
 A detailed breakdown of tasks for building a reusable, UI-agnostic webcam background switcher package for React/Next.js.
 

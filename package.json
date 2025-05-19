@@ -1,5 +1,5 @@
 {
-  "name": "webcam-bg-switcher",
+  "name": "backdrop-engine",
   "version": "1.0.0",
   "description": "A reusable React hook and utility package for real-time webcam background switching and blurring using [MediaPipe Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html). This package provides the core logic and compositing, allowing you to build your own custom UI in React, Next.js, or any modern frontend framework.",
   "main": "dist/index.js",
@@ -8,11 +8,12 @@
     "test": "jest",
     "build": "tsc --project tsconfig.json --outDir dist",
     "build:watch": "tsc --project tsconfig.json --outDir dist --watch",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "prepare": "npm run build"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Konark Bhardwaj",
+  "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^9.25.1",
     "@testing-library/jest-dom": "^6.6.3",
@@ -39,5 +40,12 @@
   },
   "dependencies": {
     "@mediapipe/camera_utils": "^0.3.1675466862"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE-MIT",
+    "UNLICENSE",
+    "COPYING"
+  ]
 }

@@ -1,4 +1,4 @@
-# React Webcam Background Switcher (Core, UI-Agnostic)
+# BackdropEngine (Core, UI-Agnostic)
 
 A reusable React hook and utility package for real-time webcam background switching and blurring using [MediaPipe Selfie Segmentation](https://google.github.io/mediapipe/solutions/selfie_segmentation.html). This package provides the core logic and compositing, allowing you to build your own custom UI in React, Next.js, or any modern frontend framework.
 
@@ -18,9 +18,9 @@ A reusable React hook and utility package for real-time webcam background switch
 ## Installation
 
 ```bash
-npm install react-webcam-bg-switcher
+npm install BackdropEngine
 # or
-yarn add react-webcam-bg-switcher
+yarn add BackdropEngine
 ```
 
 ---
@@ -30,7 +30,7 @@ yarn add react-webcam-bg-switcher
 ### Basic Example (React Hook)
 
 ```jsx
-import { useWebcamBackgroundSwitcher } from "react-webcam-bg-switcher";
+import { useWebcamBackgroundSwitcher } from "BackdropEngine";
 
 const backgrounds = [
   { label: "None", type: "none" },
@@ -375,7 +375,7 @@ document.getElementById('bgUpload').addEventListener('change', (e) => {
 
 ```jsx
 import React, { useRef } from 'react';
-import { useWebcamBackgroundSwitcher } from 'react-webcam-bg-switcher';
+import { useWebcamBackgroundSwitcher } from 'BackdropEngine';
 
 function MyComponent() {
   const fileInputRef = useRef();
@@ -412,6 +412,6 @@ function MyComponent() {
 
 If you have questions, suggestions, or encounter any issues, please open an issue or start a discussion on the repository. Contributions and feedback are always welcome!
 
-Thank you for using React Webcam Background Switcher.
+Thank you for using BackdropEngine.
 
 ---

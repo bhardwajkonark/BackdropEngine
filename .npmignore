@@ -1,0 +1,11 @@
+src/
+tests/
+examples/
+.gitignore
+.prettierrc
+.DS_Store
+index5.html
+jest.config.js
+setupTests.js
+eslint.config.mjs
+.cursor/

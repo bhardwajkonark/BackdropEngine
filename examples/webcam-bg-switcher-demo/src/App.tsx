@@ -1,6 +1,6 @@
 import React from 'react';
 // @ts-ignore: Local symlinked package for demo purposes
-import { useWebcamBackgroundSwitcher } from 'webcam-bg-switcher';
+import { useWebcamBackgroundSwitcher } from 'backdrop-engine';
 const backgrounds = [
   { label: 'None', type: 'none' as const },
   { label: 'Blur', type: 'blur' as const },

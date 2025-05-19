@@ -1,4 +1,4 @@
-# Test Plan: React Webcam Background Switcher
+# Test Plan: BackdropEngine
 
 A comprehensive set of test cases to ensure correctness, robustness, and reliability of all core modules and the main React hook. This includes unit, integration, and manual tests.
 
