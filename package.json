@@ -5,7 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "build": "tsc --project tsconfig.json --outDir dist",
+    "build:watch": "tsc --project tsconfig.json --outDir dist --watch",
+    "clean": "rimraf dist"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +28,7 @@
     "lint-staged": "^15.5.1",
     "prettier": "^3.5.3",
     "react-test-renderer": "^19.1.0",
+    "rimraf": "^6.0.1",
     "ts-jest": "^29.3.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.31.1"

@@ -116,6 +116,63 @@ describe('Compositing Logic', () => {
         }).not.toThrow();
     });
 
+    it('uses ImageBitmap-to-Canvas optimization on Firefox', () => {
+        // Simulate Firefox
+        const originalUA = window.navigator.userAgent;
+        Object.defineProperty(window.navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/109.0',
+            configurable: true,
+        });
+        // Mock ImageBitmap
+        class FakeImageBitmap {
+            width = 100;
+            height = 100;
+        }
+        const fakeBitmap = new (FakeImageBitmap as any)();
+        expect(() => {
+            compositeFrame({
+                inputImage,
+                segmentationMask: fakeBitmap,
+                outputCanvas: canvas,
+                options: { mode: 'blur' },
+            });
+        }).not.toThrow();
+        // Restore UA
+        Object.defineProperty(window.navigator, 'userAgent', {
+            value: originalUA,
+            configurable: true,
+        });
+    });
+
+    it('logs debug message when ImageBitmap-to-Canvas optimization is used', () => {
+        // Simulate Firefox
+        const originalUA = window.navigator.userAgent;
+        Object.defineProperty(window.navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/109.0',
+            configurable: true,
+        });
+        // Mock ImageBitmap
+        class FakeImageBitmap {
+            width = 100;
+            height = 100;
+        }
+        const fakeBitmap = new (FakeImageBitmap as any)();
+        const logSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
+        compositeFrame({
+            inputImage,
+            segmentationMask: fakeBitmap,
+            outputCanvas: canvas,
+            options: { mode: 'blur' },
+        });
+        expect(logSpy).toHaveBeenCalledWith('[WebcamBG Debug] Using Firefox ImageBitmap-to-Canvas optimization.');
+        logSpy.mockRestore();
+        // Restore UA
+        Object.defineProperty(window.navigator, 'userAgent', {
+            value: originalUA,
+            configurable: true,
+        });
+    });
+
     it('does not leak memory (offscreen canvas reuse)', () => {
         // This test is limited in jsdom, but we can check that multiple calls do not throw
         for (let i = 0; i < 10; i++) {
