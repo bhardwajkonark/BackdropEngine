@@ -29,9 +29,19 @@ yarn add BackdropEngine
 
 ### Basic Example (React Hook)
 
-```jsx
-import { useWebcamBackgroundSwitcher } from "BackdropEngine";
+You can import the hook using either a named or default import:
 
+```jsx
+// Named import (recommended)
+import { useWebcamBackgroundSwitcher } from "backdrop-engine";
+
+// OR default import
+import useWebcamBackgroundSwitcher from "backdrop-engine";
+```
+
+Both styles are supported.
+
+```jsx
 const backgrounds = [
   { label: "None", type: "none" },
   { label: "Blur", type: "blur" },
@@ -375,7 +385,7 @@ document.getElementById('bgUpload').addEventListener('change', (e) => {
 
 ```jsx
 import React, { useRef } from 'react';
-import { useWebcamBackgroundSwitcher } from 'BackdropEngine';
+import { useWebcamBackgroundSwitcher } from 'backdrop-engine';
 
 function MyComponent() {
   const fileInputRef = useRef();
@@ -408,10 +418,24 @@ function MyComponent() {
 
 ---
 
+## TypeScript Usage: Importing Types
+
+BackdropEngine exports all its types for TypeScript users. You can import them directly from the package:
+
+```ts
+import type {
+  UseWebcamBackgroundSwitcherOptions,
+  BackgroundOption,
+  LoadedBackground
+} from 'backdrop-engine';
+```
+
+This allows you to type your options, backgrounds, and more for full type safety.
+
+---
+
 ## Support & Feedback
 
 If you have questions, suggestions, or encounter any issues, please open an issue or start a discussion on the repository. Contributions and feedback are always welcome!
 
 Thank you for using BackdropEngine.
-
----

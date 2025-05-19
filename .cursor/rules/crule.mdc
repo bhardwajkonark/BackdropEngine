@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Cursor Rules for webcam-bg-switcher
+# Cursor Rules for BackdropEngine
 
 ##Rules
 - Use TypeScript for all source files.
