@@ -58,6 +58,9 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
     const lastBgChangeRef = useRef<number>(0);
     const BG_CHANGE_DEBOUNCE_MS = 300;
 
+    // Ref for animation frame in 'none' mode
+    const noneModeAnimationRef = useRef<number | null>(null);
+
     // Preload backgrounds on mount or when options.backgrounds changes
     useEffect(() => {
         if (options.debug) {
@@ -147,16 +150,156 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
         if (options.debug) {
             console.log('[WebcamBG Debug] Compositing effect triggered. Status:', status, 'Current background:', currentBackground, 'Blur radius:', blurRadius, 'Mirror:', mirror);
         }
-        if (status !== 'ready' || !videoRef.current || !canvasRef.current || !currentBackground) return;
+        const bg = currentBackground;
+        const bgType = bg?.option?.type ?? 'none';
+        const isNoneMode = bgType === 'none';
+        if (
+            status !== 'ready' ||
+            !videoRef.current ||
+            !canvasRef.current ||
+            (!isNoneMode && !bg)
+        ) {
+            return;
+        }
         let camera: any = null;
         let stopped = false;
         const loader = mediapipeLoaderRef.current;
         const video = videoRef.current;
         const canvas = canvasRef.current;
-        const bg = currentBackground;
         const frameSkip = options.frameSkip ?? 1;
         let frameCount = 0;
         let cancelled = false;
+        // Cancel any previous 'none' mode animation
+        if (noneModeAnimationRef.current) {
+            cancelAnimationFrame(noneModeAnimationRef.current);
+            noneModeAnimationRef.current = null;
+        }
+        let cleanupListener: (() => void) | null = null;
+        if (bgType === 'none') {
+            // For 'none' mode, use a direct animation frame loop and do NOT use MediaPipe Camera utility at all
+            const startDrawLoop = () => {
+                if (options.debug) console.log('[WebcamBG Debug] Starting draw loop for none mode');
+                const drawFrame = () => {
+                    if (stopped) return;
+                    const video = videoRef.current!;
+                    const canvas = canvasRef.current!;
+                    const ctx = canvas.getContext('2d');
+                    if (video.paused && video.srcObject) {
+                        video.play().then(() => {
+                            if (options.debug) console.log('[WebcamBG Debug] drawFrame: video.play() forced while paused');
+                        }).catch((err) => {
+                            if (options.debug) console.warn('[WebcamBG Debug] drawFrame: video.play() failed', err);
+                        });
+                        noneModeAnimationRef.current = requestAnimationFrame(drawFrame);
+                        return;
+                    }
+                    if (options.debug) {
+                        console.log('[WebcamBG Debug] drawFrame video size:', video.videoWidth, video.videoHeight, 'paused:', video.paused);
+                    }
+                    if (video.videoWidth === 0 || video.videoHeight === 0) {
+                        noneModeAnimationRef.current = requestAnimationFrame(drawFrame);
+                        return;
+                    }
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    if (ctx) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    }
+                    noneModeAnimationRef.current = requestAnimationFrame(drawFrame);
+                };
+                drawFrame();
+            };
+            (async () => {
+                // Step 1: Check and restart webcam if needed
+                const stream = webcamManagerRef.current?.getStream();
+                if (stream) {
+                    const videoTrack = stream.getVideoTracks()[0];
+                    if (!videoTrack || videoTrack.readyState !== 'live') {
+                        if (options.debug) console.warn('[WebcamBG Debug] Video track not live, restarting webcam');
+                        await webcamManagerRef.current?.stop();
+                        await webcamManagerRef.current?.start();
+                    }
+                }
+                // Step 2: Hard reset the video element
+                const oldVideo = video;
+                const parent = oldVideo.parentElement;
+                let targetVideo = oldVideo;
+                if (parent) {
+                    const newVideo = document.createElement('video');
+                    // Copy attributes from old video
+                    for (const attr of oldVideo.attributes) {
+                        newVideo.setAttribute(attr.name, attr.value);
+                    }
+                    newVideo.style.cssText = oldVideo.style.cssText;
+                    newVideo.autoplay = true;
+                    newVideo.muted = true;
+                    newVideo.playsInline = true;
+                    // Replace in DOM
+                    parent.replaceChild(newVideo, oldVideo);
+                    // Update ref
+                    videoRef.current = newVideo;
+                    targetVideo = newVideo;
+                    if (options.debug) console.log('[WebcamBG Debug] Video element hard reset and replaced in DOM');
+                }
+                // Attach stream
+                if (webcamManagerRef.current) {
+                    const stream = webcamManagerRef.current.getStream();
+                    if (stream) {
+                        targetVideo.srcObject = stream;
+                        if (options.debug) console.log('[WebcamBG Debug] Stream attached to video element');
+                    }
+                }
+                // Always wait for loadedmetadata before starting draw loop
+                let started = false;
+                const onReady = () => {
+                    if (started) return;
+                    started = true;
+                    if (options.debug) console.log('[WebcamBG Debug] onloadedmetadata fired, starting draw loop');
+                    targetVideo.removeEventListener('loadedmetadata', onReady);
+                    // Force play before starting draw loop
+                    targetVideo.play().then(() => {
+                        if (options.debug) console.log('[WebcamBG Debug] onloadedmetadata: video.play() called');
+                        startDrawLoop();
+                    }).catch((err) => {
+                        if (options.debug) console.warn('[WebcamBG Debug] onloadedmetadata: video.play() failed', err);
+                        startDrawLoop(); // Still try to start draw loop
+                    });
+                };
+                targetVideo.addEventListener('loadedmetadata', onReady);
+                cleanupListener = () => targetVideo.removeEventListener('loadedmetadata', onReady);
+                // Fallback: start after 2s if metadata never loads
+                setTimeout(() => {
+                    if (!started && targetVideo.videoWidth > 0 && targetVideo.videoHeight > 0) {
+                        started = true;
+                        if (options.debug) console.log('[WebcamBG Debug] Fallback timeout: video ready, starting draw loop');
+                        targetVideo.removeEventListener('loadedmetadata', onReady);
+                        targetVideo.play().then(() => {
+                            if (options.debug) console.log('[WebcamBG Debug] Fallback: video.play() called');
+                            startDrawLoop();
+                        }).catch((err) => {
+                            if (options.debug) console.warn('[WebcamBG Debug] Fallback: video.play() failed', err);
+                            startDrawLoop();
+                        });
+                    }
+                }, 2000);
+                // Try to play video immediately
+                targetVideo.play().catch((err) => {
+                    if (options.debug) console.warn('[WebcamBG Debug] video.play() failed after attaching stream:', err);
+                });
+            })();
+            return () => {
+                stopped = true;
+                if (noneModeAnimationRef.current) {
+                    cancelAnimationFrame(noneModeAnimationRef.current);
+                    noneModeAnimationRef.current = null;
+                }
+                if (cleanupListener) cleanupListener();
+                if (options.debug) {
+                    console.log('[WebcamBG Debug] Cleanup: none mode draw loop');
+                }
+            };
+        }
+        // For all other modes, use MediaPipe Camera utility
         (async () => {
             await loadCameraUtilsScript();
             if (cancelled) return;
@@ -174,9 +317,9 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                         segmentationMask: results.segmentationMask,
                         outputCanvas: canvas,
                         options: {
-                            mode: bg.option.type,
+                            mode: bgType,
                             blurRadius,
-                            backgroundImage: bg.image,
+                            backgroundImage: bg?.image,
                             mirror,
                         },
                     });

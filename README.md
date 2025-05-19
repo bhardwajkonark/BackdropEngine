@@ -33,6 +33,7 @@ yarn add react-webcam-bg-switcher
 import { useWebcamBackgroundSwitcher } from "react-webcam-bg-switcher";
 
 const backgrounds = [
+  { label: "None", type: "none" },
   { label: "Blur", type: "blur" },
   { label: "Beach", type: "image", src: "/beach.jpg" },
   { label: "Mountains", type: "image", src: "/mountains.jpg" },
@@ -43,24 +44,35 @@ function MyCustomUI() {
     canvasRef,
     videoRef,
     setBackground,
+    setModel,
+    setMirror,
+    setBlurRadius,
     status,
     error,
     currentBackground,
     availableBackgrounds,
+    modelSelection,
+    mirror,
+    blurRadius,
   } = useWebcamBackgroundSwitcher({
     backgrounds,
     width: 640,
     height: 480,
     onError: (err) => console.error(err),
     frameSkip: 2,
+    modelSelection: 0, // 0: fast, 1: better
+    mirror: true,
+    blurRadius: 10,
+    cdnUrl: undefined, // optional custom CDN
+    debug: false, // enable debug logging
   });
 
   return (
     <div>
       {/* Your custom controls */}
       {availableBackgrounds.map((bg) => (
-        <button key={bg.label} onClick={() => setBackground(bg)}>
-          {bg.label}
+        <button key={bg.option.label} onClick={() => setBackground(bg)}>
+          {bg.option.label}
         </button>
       ))}
       {/* Attach refs to your elements */}
@@ -87,26 +99,37 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 
 ### `useWebcamBackgroundSwitcher(options)`
 
-| Option      | Type     | Description                                       |
-| ----------- | -------- | ------------------------------------------------- |
-| backgrounds | array    | List of background options (see below)            |
-| width       | number   | Video/canvas width (default: 640)                 |
-| height      | number   | Video/canvas height (default: 480)                |
-| onError     | function | Callback for errors (webcam, image, segmentation) |
-| defaultMode | string   | Initial background mode ('blur' or image label)   |
-| frameSkip   | number   | Process every Nth frame (default: 1, no skipping) |
+| Option        | Type     | Description                                                                 |
+| ------------- | -------- | --------------------------------------------------------------------------- |
+| backgrounds   | array    | List of background options (see below)                                      |
+| width         | number   | Video/canvas width (default: 640)                                           |
+| height        | number   | Video/canvas height (default: 480)                                          |
+| onError       | function | Callback for errors (webcam, image, segmentation)                           |
+| defaultMode   | string   | Initial background mode (label of background, e.g. 'blur' or image label)   |
+| frameSkip     | number   | Process every Nth frame (default: 1, no skipping)                           |
+| modelSelection| 0 \| 1   | MediaPipe model: 0 = fast/landscape, 1 = better/selfie (default: 0)        |
+| mirror        | boolean  | Mirror the output horizontally (default: true)                              |
+| blurRadius    | number   | Blur radius for 'blur' mode (default: 10)                                   |
+| cdnUrl        | string   | Custom CDN URL for MediaPipe scripts (default: official CDN)                |
+| debug         | boolean  | Enable debug logging in console (default: false)                            |
 
 #### Returns
 
-| Value                | Type     | Description                            |
-| -------------------- | -------- | -------------------------------------- |
-| canvasRef            | ref      | Attach to your `<canvas>` element      |
-| videoRef             | ref      | Attach to your `<video>` element       |
-| setBackground        | function | Switch background (by object or label) |
-| status               | string   | 'loading', 'ready', 'error'            |
-| error                | object   | Error object if any                    |
-| currentBackground    | object   | The currently active background        |
-| availableBackgrounds | array    | List of all available backgrounds      |
+| Value                | Type                | Description                                         |
+| -------------------- | ------------------- | --------------------------------------------------- |
+| canvasRef            | ref                 | Attach to your `<canvas>` element                   |
+| videoRef             | ref                 | Attach to your `<video>` element                    |
+| setBackground        | function            | Switch background (pass a LoadedBackground object)  |
+| setModel             | function            | Switch MediaPipe model (0 or 1)                     |
+| setMirror            | function            | Enable/disable mirroring                            |
+| setBlurRadius        | function            | Set blur radius for 'blur' mode                     |
+| status               | string              | 'loading', 'ready', 'error'                         |
+| error                | object              | Error object if any                                 |
+| currentBackground    | LoadedBackground    | The currently active background                     |
+| availableBackgrounds | LoadedBackground[]  | List of all available backgrounds                   |
+| modelSelection       | 0 \| 1              | Current MediaPipe model selection                   |
+| mirror               | boolean             | Current mirror mode                                 |
+| blurRadius           | number              | Current blur radius                                 |
 
 ### Background Option Format
 
@@ -114,6 +137,21 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 { label: 'Blur', type: 'blur' }
 { label: 'Beach', type: 'image', src: '/beach.jpg' }
 ```
+
+### LoadedBackground Structure
+
+A `LoadedBackground` object has the following shape:
+
+```ts
+{
+  option: { label: string; type: 'none' | 'blur' | 'image'; src?: string };
+  image?: HTMLImageElement; // present if type is 'image'
+  isReady: boolean;
+  error?: Error;
+}
+```
+
+Use the `option.label` as a unique key for UI purposes. Pass the entire `LoadedBackground` object to `setBackground`.
 
 ---
 
@@ -154,23 +192,22 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 
 This package supports the following background modes:
 
-### 1. Blur Mode
+### 1. None Mode
+
+- **Description:** The original webcam feed is shown with no background effect.
+- **Use Case:** For users who want to disable all effects and show the raw camera.
+
+### 2. Blur Mode
 
 - **Description:** The background behind the person is blurred in real time, preserving privacy and focus.
 - **Performance:** Blurring is efficient, especially when combined with frame skipping and the fast segmentation model.
 - **Use Case:** Virtual meetings, privacy, focus enhancement.
 
-### 2. Image Mode
+### 3. Image Mode
 
 - **Description:** The background is replaced with a custom image of your choice.
 - **Performance:** Slightly more resource-intensive than blur, especially with high-resolution images, but still efficient with frame skipping and model selection.
 - **Use Case:** Virtual backgrounds, branding, fun effects.
-
-### 3. (Optional/Planned) Video Mode
-
-- **Description:** The background is replaced with a video. (Advanced, not included by default.)
-- **Performance:** Most resource-intensive; requires careful optimization.
-- **Use Case:** Dynamic/animated backgrounds, advanced effects.
 
 ---
 
@@ -223,7 +260,9 @@ Pull requests and issues are welcome!
 
 ## License
 
-MIT
+This project is dual-licensed under the Unlicense and MIT licenses.
+
+You may use this code under the terms of either license.
 
 ---
 
@@ -366,5 +405,13 @@ function MyComponent() {
 ```
 
 **Note:** The package will automatically load the image from the Blob URL and use it as a background.
+
+---
+
+## Support & Feedback
+
+If you have questions, suggestions, or encounter any issues, please open an issue or start a discussion on the repository. Contributions and feedback are always welcome!
+
+Thank you for using React Webcam Background Switcher.
 
 ---

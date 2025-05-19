@@ -1,4 +1,4 @@
-export type CompositingMode = 'blur' | 'image';
+export type CompositingMode = 'none' | 'blur' | 'image';
 
 export interface CompositingOptions {
     mode: CompositingMode;
@@ -41,7 +41,7 @@ function imageBitmapToCanvas(bitmap: ImageBitmap): HTMLCanvasElement {
 
 /**
  * Composites the person (from segmentation mask) with the chosen background on the output canvas.
- * - Supports 'blur' and 'image' modes.
+ * - Supports 'none', 'blur', and 'image' modes.
  * - UI-agnostic: you provide the canvases and images.
  */
 export function compositeFrame({
@@ -58,95 +58,51 @@ export function compositeFrame({
     const ctx = outputCanvas.getContext('2d');
     if (!ctx) throw new Error('No 2D context on output canvas');
 
-    // Robustly determine input size
-    let width = outputCanvas.width;
-    let height = outputCanvas.height;
-    if (inputImage instanceof HTMLVideoElement) {
-        width = inputImage.videoWidth;
-        height = inputImage.videoHeight;
-    } else if ('width' in inputImage && 'height' in inputImage) {
-        width = (inputImage as any).width;
-        height = (inputImage as any).height;
-    }
-    if (!width || !height) {
-        console.warn('[WebcamBG Debug] Invalid inputImage size:', width, height, inputImage);
-        return;
-    }
-    outputCanvas.width = width;
-    outputCanvas.height = height;
-
-    // Defensive: check segmentationMask
-    let maskWidth = 0, maskHeight = 0;
-    let maskToUse: CanvasImageSource = segmentationMask;
-    // Firefox optimization: convert ImageBitmap to Canvas
-    if (isFirefox() && segmentationMask instanceof window.ImageBitmap) {
-        maskToUse = imageBitmapToCanvas(segmentationMask);
-    }
-    if (segmentationMask instanceof HTMLVideoElement) {
-        maskWidth = segmentationMask.videoWidth;
-        maskHeight = segmentationMask.videoHeight;
-    } else if ('width' in segmentationMask && 'height' in segmentationMask) {
-        maskWidth = (segmentationMask as any).width;
-        maskHeight = (segmentationMask as any).height;
-    }
-    if (!maskWidth || !maskHeight) {
-        console.warn('[WebcamBG Debug] Invalid segmentationMask size:', maskWidth, maskHeight, segmentationMask);
-        return;
-    }
-
-    // Debug: draw only video
-    if (options.debugMode === 'video') {
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(inputImage, 0, 0, width, height);
-        return;
-    }
-    // Debug: draw only mask
-    if (options.debugMode === 'mask') {
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(maskToUse, 0, 0, width, height);
-        return;
-    }
+    // Set canvas size to match input
+    outputCanvas.width = (inputImage as any).width || outputCanvas.width;
+    outputCanvas.height = (inputImage as any).height || outputCanvas.height;
 
     // Optional mirroring
     if (options.mirror) {
         ctx.save();
-        ctx.translate(width, 0);
+        ctx.translate(outputCanvas.width, 0);
         ctx.scale(-1, 1);
     }
 
     // Step 1: Draw background
+    if (options.mode === 'none') {
+        ctx.drawImage(inputImage, 0, 0, outputCanvas.width, outputCanvas.height);
+        if (options.mirror) ctx.restore();
+        return;
+    }
     if (options.mode === 'blur') {
         ctx.save();
         ctx.filter = `blur(${options.blurRadius ?? 10}px)`;
-        ctx.drawImage(inputImage, 0, 0, width, height);
+        ctx.drawImage(inputImage, 0, 0, outputCanvas.width, outputCanvas.height);
         ctx.restore();
     } else if (options.mode === 'image' && options.backgroundImage) {
-        ctx.drawImage(options.backgroundImage, 0, 0, width, height);
+        ctx.drawImage(options.backgroundImage, 0, 0, outputCanvas.width, outputCanvas.height);
     } else {
         ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
     }
 
     // Step 2: Overlay the person (using mask)
-    // Use a reusable offscreen canvas for compositing
-    if (!reusableTempCanvas) {
-        reusableTempCanvas = document.createElement('canvas');
-    }
-    const tempCanvas = reusableTempCanvas;
-    tempCanvas.width = width;
-    tempCanvas.height = height;
+    // Use an offscreen canvas for compositing
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = outputCanvas.width;
+    tempCanvas.height = outputCanvas.height;
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) throw new Error('No 2D context on temp canvas');
 
-    tempCtx.clearRect(0, 0, width, height);
-    tempCtx.drawImage(inputImage, 0, 0, width, height);
+    tempCtx.drawImage(inputImage, 0, 0, outputCanvas.width, outputCanvas.height);
     tempCtx.globalCompositeOperation = 'destination-in';
-    tempCtx.drawImage(maskToUse, 0, 0, width, height);
+    tempCtx.drawImage(segmentationMask, 0, 0, outputCanvas.width, outputCanvas.height);
     tempCtx.globalCompositeOperation = 'source-over';
 
     // Debug: draw only temp composited canvas
     if (options.debugMode === 'temp') {
-        ctx.clearRect(0, 0, width, height);
+        ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
         ctx.drawImage(tempCanvas, 0, 0);
         if (options.mirror) ctx.restore();
         return;

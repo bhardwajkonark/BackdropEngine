@@ -204,6 +204,25 @@ A detailed breakdown of tasks for building a reusable, UI-agnostic webcam backgr
 
 ---
 
+## 12. Browser-Specific Optimizations & Fallbacks
+- **Status:** [ ] To Do
+- **Remarks:** Firefox and some other browsers have lower performance and more lag with real-time segmentation and compositing. Chrome is currently the best supported.
+- **Details:** Implement browser-specific optimizations, fallbacks, and user guidance for best performance.
+- **Subtasks:**
+  - Auto-detect Firefox and lower resolution/frameSkip for better performance
+  - Add user-facing warnings or recommendations for best browsers
+  - Investigate further WebGL compositing for advanced users
+  - Document known browser-specific issues and workarounds
+- **Acceptance Criteria:**
+  - App remains usable and stable on all major browsers
+  - Users are informed of best practices for their browser
+- **Edge Cases:**
+  - New browser versions introduce regressions
+- **Risks & Mitigations:**
+  - *Risk:* Unfixable browser bugs → *Mitigation:* Provide clear user guidance and fallbacks
+
+---
+
 ## Cross-Cutting Concerns
 - **Performance:** Frame skipping, model selection, dynamic canvas sizing, offscreen canvas reuse
 - **Modes:** Blur, image, (optional) video

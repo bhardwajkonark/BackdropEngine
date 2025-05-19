@@ -1,4 +1,4 @@
-export type BackgroundType = 'blur' | 'image';
+export type BackgroundType = 'none' | 'blur' | 'image';
 
 export interface BackgroundOption {
     label: string;
@@ -27,7 +27,7 @@ export async function preloadBackgrounds(options: BackgroundOption[]): Promise<L
                     return { option, isReady: false, error: err };
                 }
             }
-            // Blur or other types don't need preloading
+            // Blur or none types don't need preloading
             return { option, isReady: true };
         })
     );
