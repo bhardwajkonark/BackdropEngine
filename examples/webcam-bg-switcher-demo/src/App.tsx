@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 // @ts-ignore: Local symlinked package for demo purposes
 import { useWebcamBackgroundSwitcher } from 'backdrop-engine';
 const backgrounds = [
@@ -18,15 +18,7 @@ const backgrounds = [
 ];
 
 function App() {
-  const {
-    canvasRef,
-    videoRef,
-    setBackground,
-    status,
-    error,
-    currentBackground,
-    availableBackgrounds,
-  } = useWebcamBackgroundSwitcher({
+  const options = useMemo(() => ({
     backgrounds,
     width: 640,
     height: 480,
@@ -39,9 +31,19 @@ function App() {
     },
     debug: true,
     frameSkip: 2,
-    blurRadius: 10,
+    // blurRadius: 10,
     mirror: false,
-  });
+  }), []);
+
+  const {
+    canvasRef,
+    videoRef,
+    setBackground,
+    status,
+    error,
+    currentBackground,
+    availableBackgrounds,
+  } = useWebcamBackgroundSwitcher(options);
 
   return (
     <div style={{ padding: 16, fontFamily: 'sans-serif', maxWidth: 800, margin: '0 auto' }}>

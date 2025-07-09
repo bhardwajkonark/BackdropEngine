@@ -32,16 +32,9 @@ yarn add BackdropEngine
 You can import the hook using either a named or default import:
 
 ```jsx
-// Named import (recommended)
+import React, { useMemo } from 'react';
 import { useWebcamBackgroundSwitcher } from "backdrop-engine";
 
-// OR default import
-import useWebcamBackgroundSwitcher from "backdrop-engine";
-```
-
-Both styles are supported.
-
-```jsx
 const backgrounds = [
   { label: "None", type: "none" },
   { label: "Blur", type: "blur" },
@@ -50,6 +43,20 @@ const backgrounds = [
 ];
 
 function MyCustomUI() {
+  // IMPORTANT: Use useMemo to prevent infinite re-renders
+  const options = useMemo(() => ({
+    backgrounds,
+    width: 640,
+    height: 480,
+    onError: (err) => console.error(err),
+    frameSkip: 2,
+    modelSelection: 0, // 0: fast, 1: better
+    mirror: true,
+    blurRadius: 10,
+    cdnUrl: undefined, // optional custom CDN
+    debug: false, // enable debug logging
+  }), []);
+
   const {
     canvasRef,
     videoRef,
@@ -64,18 +71,7 @@ function MyCustomUI() {
     modelSelection,
     mirror,
     blurRadius,
-  } = useWebcamBackgroundSwitcher({
-    backgrounds,
-    width: 640,
-    height: 480,
-    onError: (err) => console.error(err),
-    frameSkip: 2,
-    modelSelection: 0, // 0: fast, 1: better
-    mirror: true,
-    blurRadius: 10,
-    cdnUrl: undefined, // optional custom CDN
-    debug: false, // enable debug logging
-  });
+  } = useWebcamBackgroundSwitcher(options);
 
   return (
     <div>
@@ -108,6 +104,8 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 ## API
 
 ### `useWebcamBackgroundSwitcher(options)`
+
+**⚠️ Important:** The `options` object should be memoized with `useMemo` to prevent infinite re-renders. See the example above and troubleshooting section for details.
 
 | Option        | Type     | Description                                                                 |
 | ------------- | -------- | --------------------------------------------------------------------------- |
@@ -357,6 +355,32 @@ if (!window.Camera) {
   - The video can be hidden (`display: none`), but it must be playing.
   - Check the browser console for warnings about video playback or permissions.
   - If you see errors about `Camera` not being found, ensure you are not importing from `@mediapipe/camera_utils` and let the hook dynamically load the script as described above.
+
+## Troubleshooting: "Maximum update depth exceeded" Error
+
+If you encounter a "Maximum update depth exceeded" error, this is caused by the options object being recreated on every render. To fix this:
+
+1. **Use `useMemo` to memoize the options object:**
+   ```jsx
+   import React, { useMemo } from 'react';
+   
+   function MyComponent() {
+     const options = useMemo(() => ({
+       backgrounds,
+       width: 640,
+       height: 480,
+       debug: false,
+       // ... other options
+     }), []); // Empty dependency array for stable options
+     
+     const { canvasRef, videoRef, setBackground } = useWebcamBackgroundSwitcher(options);
+     // ...
+   }
+   ```
+
+2. **Why this happens:** React hooks compare dependencies by reference. If the options object is recreated on every render, the hook's useEffect dependencies change, causing infinite re-renders.
+
+3. **Best practice:** Always memoize the options object when using this hook to prevent performance issues and infinite loops.
 
 ---
 
