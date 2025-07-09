@@ -4,6 +4,18 @@ import { MediaPipeLoader, DEFAULT_MEDIAPIPE_CDN } from './mediapipe/loader';
 import { preloadBackgrounds, BackgroundOption, LoadedBackground } from './utils/backgrounds';
 import { compositeFrame } from './utils/compositor';
 
+/**
+ * React hook for webcam background switching using MediaPipe Selfie Segmentation.
+ * 
+ * FIXED: Maximum update depth exceeded error was caused by:
+ * 1. Options object being recreated on every render in components
+ * 2. useEffect dependencies including options properties that change on every render
+ * 
+ * Solution:
+ * - Components should use useMemo to memoize options object
+ * - Hook dependencies optimized to avoid unnecessary re-runs
+ * - Callback functions optimized to prevent re-renders
+ */
 export interface UseWebcamBackgroundSwitcherOptions {
     backgrounds: BackgroundOption[];
     width?: number;
@@ -92,7 +104,7 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                 console.log('[WebcamBG Debug] Cleanup: backgrounds effect');
             }
         };
-    }, [options.backgrounds, options.defaultMode]);
+    }, [options.backgrounds, options.defaultMode, options.debug, options.onError]);
 
     // Initialize webcam and MediaPipe
     useEffect(() => {
@@ -143,7 +155,7 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                 console.log('[WebcamBG Debug] Cleanup: webcam/mediapipe effect');
             }
         };
-    }, [options.cdnUrl, modelSelection]);
+    }, [options.cdnUrl, modelSelection, options.debug]);
 
     // Compositing loop (replaced with MediaPipe Camera utility)
     useEffect(() => {
@@ -349,7 +361,7 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                 console.log('[WebcamBG Debug] Cleanup: MediaPipe Camera effect');
             }
         };
-    }, [status, currentBackground, blurRadius, mirror, options.frameSkip, options.width, options.height]);
+    }, [status, currentBackground, blurRadius, mirror]);
 
     // API methods
     const setBackground = useCallback((bg: LoadedBackground) => {
@@ -365,26 +377,26 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
         }
         lastBgChangeRef.current = now;
         setCurrentBackground(bg);
-    }, [options.debug]);
+    }, []);
     const setModel = useCallback((model: 0 | 1) => {
         if (options.debug) {
             console.log('[WebcamBG Debug] setModel called:', model);
         }
         setModelSelection(model);
         mediapipeLoaderRef.current?.setModelSelection(model);
-    }, [options.debug]);
+    }, []);
     const setMirrorMode = useCallback((val: boolean) => {
         if (options.debug) {
             console.log('[WebcamBG Debug] setMirror called:', val);
         }
         setMirror(val);
-    }, [options.debug]);
+    }, []);
     const setBlur = useCallback((val: number) => {
         if (options.debug) {
             console.log('[WebcamBG Debug] setBlurRadius called:', val);
         }
         setBlurRadius(val);
-    }, [options.debug]);
+    }, []);
 
     return {
         videoRef,

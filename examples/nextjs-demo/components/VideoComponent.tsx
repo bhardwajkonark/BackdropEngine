@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useWebcamBackgroundSwitcher } from 'backdrop-engine';
 
 const backgrounds = [
@@ -10,6 +10,15 @@ const backgrounds = [
 ];
 
 const VideoComponent: React.FC = () => {
+    const options = useMemo(() => ({
+        backgrounds,
+        width: 640,
+        height: 480,
+        debug: true,
+        frameSkip: 2,
+        mirror: false,
+    }), []);
+
     const {
         canvasRef,
         videoRef,
@@ -18,14 +27,7 @@ const VideoComponent: React.FC = () => {
         error,
         currentBackground,
         availableBackgrounds,
-    } = useWebcamBackgroundSwitcher({
-        backgrounds,
-        width: 640,
-        height: 480,
-        debug: true,
-        frameSkip: 2,
-        mirror: false,
-    });
+    } = useWebcamBackgroundSwitcher(options);
 
     return (
         <div style={{ padding: 16, fontFamily: 'sans-serif', maxWidth: 800, margin: '0 auto' }}>
