@@ -25,6 +25,7 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.0.0",
     "husky": "^9.1.7",
+    "jest": "^30.0.4",
     "jest-environment-jsdom": "^29.7.0",
     "lint-staged": "^15.5.1",
     "prettier": "^3.5.3",
@@ -35,11 +36,12 @@
     "typescript-eslint": "^8.31.1"
   },
   "peerDependencies": {
-    "react": ">=17.0.0",
+    "react": "*",
     "react-dom": ">=17.0.0"
   },
   "dependencies": {
-    "@mediapipe/camera_utils": "^0.3.1675466862"
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "facefilter": "^3.0.0"
   },
   "files": [
     "dist",

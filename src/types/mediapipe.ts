@@ -19,6 +19,15 @@ export interface MediaPipeLoaderOptions {
     debug?: boolean;
 }
 
+/**
+ * Face filter options for the main hook
+ */
+export interface FaceFilterOptions {
+    enableFaceFilters?: boolean;
+    faceFilters?: import('./jeeliz').FaceFilter[];
+    jeelizOptions?: import('./jeeliz').JeelizManagerOptions;
+}
+
 // Extend the Window interface to include SelfieSegmentation for type safety
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global {
