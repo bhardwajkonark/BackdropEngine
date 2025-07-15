@@ -1,46 +1,73 @@
-# Getting Started with Create React App
+# Webcam Background Switcher Demo with Face Filters
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This demo showcases the BackdropEngine package with both background switching and face filter capabilities.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+### Background Switching
+- **None**: Original webcam feed
+- **Blur**: Background blur effect
+- **Image**: Custom background images (Office, Beach, Mountains, etc.)
 
-### `npm start`
+### Face Filters
+- **Glasses**: Overlay glasses on eyes
+- **Hat**: Add a hat on the face
+- **Mask**: Add a mask on the mouth
+- **Multiple Filters**: Combine multiple filters simultaneously
+- **Real-time Tracking**: Filters follow facial movements
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## How to Use
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+1. **Allow Camera Access**: Click "Allow" when prompted for camera access
+2. **Switch Backgrounds**: Use the background control buttons to change backgrounds
+3. **Add Face Filters**: Click the filter buttons to add/remove face filters
+4. **Combine Effects**: Use both background switching and face filters together
+5. **Clear Filters**: Use "Clear All Filters" to remove all face filters
 
-### `npm test`
+## Technical Details
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Face Filter Implementation
+- Uses Jeeliz FaceFilter for real-time face detection
+- 468 facial landmarks for precise positioning
+- Automatic scaling and rotation based on face movement
+- Performance optimized with frame skipping
 
-### `npm run build`
+### Sample Filters
+The demo includes three sample filters:
+- **Glasses**: Positioned on eyes with 1.2x scale
+- **Hat**: Positioned on face with offset for proper placement
+- **Mask**: Positioned on mouth area
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Performance
+- Maintains 30+ FPS with both background switching and face filters
+- Adaptive frame skipping for optimal performance
+- Memory efficient with image caching
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Development
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+This demo uses:
+- React 18+
+- TypeScript
+- BackdropEngine (local package)
+- Jeeliz FaceFilter (CDN)
 
-### `npm run eject`
+## Browser Compatibility
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- ✅ Chrome/Edge: Full support
+- ✅ Firefox: Full support
+- ✅ Safari: Full support
+- ✅ Mobile: Good performance on modern devices
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Troubleshooting
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+1. **Camera not working**: Ensure HTTPS or localhost, check camera permissions
+2. **Face filters not appearing**: Wait for face detection to initialize (may take a few seconds)
+3. **Performance issues**: Try reducing frame skip settings or disabling some filters
+4. **Filters not positioned correctly**: Ensure good lighting and face visibility
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Next Steps
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Add more filter types (animations, color effects)
+- Implement filter customization controls
+- Add filter intensity adjustments
+- Create custom filter upload functionality

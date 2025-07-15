@@ -1,6 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 // @ts-ignore: Local symlinked package for demo purposes
 import { useWebcamBackgroundSwitcher } from 'backdrop-engine';
+import { BeautyFilter } from '../../../src/utils/faceFilters';
+import './App.css';
+
+// Sample backgrounds
 const backgrounds = [
   { label: 'None', type: 'none' as const },
   { label: 'Blur', type: 'blur' as const },
@@ -17,139 +21,199 @@ const backgrounds = [
 
 ];
 
+// Sample beauty filters
+const beautyFilterOptions: BeautyFilter[] = [
+  {
+    id: 'skin-smoothing',
+    type: 'skin-smoothing',
+    intensity: 0.5,
+    enabled: true,
+    options: {
+      blurRadius: 3,
+    },
+  },
+  {
+    id: 'eye-enhancement',
+    type: 'eye-enhancement',
+    intensity: 0.6,
+    enabled: true,
+    options: {
+      brightness: 1.2,
+      contrast: 1.1,
+    },
+  },
+  {
+    id: 'lip-enhancement',
+    type: 'lip-enhancement',
+    intensity: 0.4,
+    enabled: true,
+    options: {
+      color: '#ff6b9d',
+    },
+  },
+  {
+    id: 'face-contouring',
+    type: 'face-contouring',
+    intensity: 0.3,
+    enabled: true,
+    options: {
+      slimFactor: 0.1,
+    },
+  },
+  {
+    id: 'blush',
+    type: 'blush',
+    intensity: 0.5,
+    enabled: true,
+    options: {
+      blushColor: '#ff9999',
+      blushOpacity: 0.3,
+    },
+  },
+  {
+    id: 'brightening',
+    type: 'brightening',
+    intensity: 0.4,
+    enabled: true,
+  },
+];
+
 function App() {
+  const [selectedBeautyFilters, setSelectedBeautyFilters] = useState<BeautyFilter[]>([]);
+
   const options = useMemo(() => ({
     backgrounds,
     width: 640,
     height: 480,
-    onError: (err: Error | { type: string; message: string }) => {
-      if ('message' in err) {
-        console.error(err.message);
-      } else {
-        console.error(err);
-      }
-    },
     debug: true,
-    frameSkip: 2,
-    // blurRadius: 10,
-    mirror: false,
+    enableFaceFilters: true,
+    jeelizOptions: {
+      canvasId: 'jeeFaceFilterCanvas',
+      NNPath: '/NN_DEFAULT.json',
+      callbackReady: () => console.log('Jeeliz ready'),
+      callbackTrack: (state: any) => console.log('Jeeliz track', state),
+    },
   }), []);
 
   const {
-    canvasRef,
     videoRef,
+    canvasRef,
     setBackground,
     status,
     error,
     currentBackground,
     availableBackgrounds,
+    faceDetections,
+    beautyFilters,
+    addBeautyFilter,
+    removeBeautyFilter,
+    clearBeautyFilters,
+    jeelizStatus,
   } = useWebcamBackgroundSwitcher(options);
 
+  const handleBackgroundChange = (background: any) => {
+    setBackground(background);
+  };
+
+  const handleBeautyFilterToggle = (filter: BeautyFilter) => {
+    const isActive = selectedBeautyFilters.some(f => f.id === filter.id);
+    if (isActive) {
+      removeBeautyFilter(filter.id);
+      setSelectedBeautyFilters(prev => prev.filter(f => f.id !== filter.id));
+    } else {
+      addBeautyFilter(filter);
+      setSelectedBeautyFilters(prev => [...prev, filter]);
+    }
+  };
+
+  const handleClearBeautyFilters = () => {
+    clearBeautyFilters();
+    setSelectedBeautyFilters([]);
+  };
+
+  if (status === 'loading') {
+    return <div className="App">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="App">Error: {error.message}</div>;
+  }
+
   return (
-    <div style={{ padding: 16, fontFamily: 'sans-serif', maxWidth: 800, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '2rem', textAlign: 'center' }}>Webcam Background Switcher Demo</h1>
-      <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {availableBackgrounds.map((bg: any) => (
-          <button
-            key={bg.option.label}
-            onClick={() => setBackground(bg)}
+    <div className="App">
+      <header className="App-header">
+        <h1>Webcam Background Switcher with Beauty Filters</h1>
+      </header>
+
+      <main className="App-main">
+        <div className="video-container">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{ display: 'none' }}
+          />
+          <canvas
+            id="jeeFaceFilterCanvas"
+            ref={canvasRef}
+            width={640}
+            height={480}
             style={{
-              margin: 4,
-              padding: '8px 16px',
-              background: currentBackground?.option.label === bg.option.label ? '#1976d2' : '#eee',
-              color: currentBackground?.option.label === bg.option.label ? '#fff' : '#222',
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 16,
-            }}
-          >
-            {bg.option.label}
-          </button>
-        ))}
-      </div>
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: 640,
-          margin: '0 auto',
-          aspectRatio: '4 / 3', // modern browsers
-          background: '#000',
-          border: '1px solid #ccc',
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}
-      >
-        <video
-          ref={videoRef}
-          style={{ display: 'none' }}
-          autoPlay
-          muted
-          playsInline
-        />
-        <canvas
-          ref={canvasRef}
-          width={640}
-          height={480}
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'block',
-            objectFit: 'cover',
-            aspectRatio: '4 / 3', // for extra safety
-          }}
-        />
-        {status === 'loading' && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
               width: '100%',
               height: '100%',
-              background: 'rgba(255,255,255,0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 24,
-              color: '#1976d2',
-              zIndex: 2,
+              display: 'block',
+              objectFit: 'cover',
+              aspectRatio: '4 / 3',
             }}
-          >
-            Loading...
+          />
+        </div>
+
+        <div className="controls">
+          <div className="control-section">
+            <h3>Background</h3>
+            <div className="button-group">
+              {availableBackgrounds.map((bg) => (
+                <button
+                  key={bg.option.label}
+                  onClick={() => handleBackgroundChange(bg)}
+                  className={currentBackground?.option.label === bg.option.label ? 'active' : ''}
+                >
+                  {bg.option.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        {status === 'error' && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              background: 'rgba(255,0,0,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-              color: '#d32f2f',
-              zIndex: 2,
-            }}
-          >
-            Error: {error?.message}
+
+          <div className="control-section">
+            <h3>Beauty Filters</h3>
+            <div className="button-group">
+              {beautyFilterOptions.map((filter) => (
+                <button
+                  key={filter.id}
+                  onClick={() => handleBeautyFilterToggle(filter)}
+                  className={selectedBeautyFilters.some(f => f.id === filter.id) ? 'active' : ''}
+                >
+                  {filter.type.replace('-', ' ')}
+                </button>
+              ))}
+              <button onClick={handleClearBeautyFilters} className="clear-btn">
+                Clear All
+              </button>
+            </div>
           </div>
-        )}
-      </div>
-      <p style={{ marginTop: 24, color: '#888', textAlign: 'center' }}>
-        Try switching backgrounds above. This demo uses the local webcam background switcher package.
-      </p>
-      <style>{`
-        @media (max-width: 700px) {
-          h1 { font-size: 1.3rem; }
-          div[style*='max-width: 640px'] { max-width: 100vw !important; }
-        }
-      `}</style>
+
+          <div className="status-section">
+            <h3>Status</h3>
+            <div className="status-grid">
+              <div>Background: {currentBackground?.option.label || 'None'}</div>
+              <div>Face Detection: {jeelizStatus === 'ready' ? 'Ready' : jeelizStatus}</div>
+              <div>Active Filters: {selectedBeautyFilters.length}</div>
+              <div>✓ Face Detected: {faceDetections.length > 0 ? 'Yes' : 'No'}</div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
