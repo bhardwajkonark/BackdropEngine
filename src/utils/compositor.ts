@@ -1,3 +1,5 @@
+import { applyBeautyFilter } from './beauty-filters';
+
 export type CompositingMode = 'none' | 'blur' | 'image';
 
 export interface CompositingOptions {
@@ -6,6 +8,10 @@ export interface CompositingOptions {
     backgroundImage?: HTMLImageElement; // Only for image mode
     mirror?: boolean;
     debugMode?: 'video' | 'mask' | 'temp' | undefined; // Add debug mode
+    beautyFilter?: {
+        type: 'none' | 'skin-smoothing' | 'brightness-contrast' | 'highlight' | 'soft-glow' | 'sharpen' | 'color-boost';
+        intensity?: number; // 0-1 for filters that support intensity
+    };
 }
 
 // Reusable offscreen canvas for compositing
@@ -72,6 +78,22 @@ export function compositeFrame({
     // Step 1: Draw background
     if (options.mode === 'none') {
         ctx.drawImage(inputImage, 0, 0, outputCanvas.width, outputCanvas.height);
+
+        // Apply beauty filters even in 'none' mode
+        if (options.beautyFilter && options.beautyFilter.type !== 'none') {
+            try {
+                applyBeautyFilter(outputCanvas, {
+                    type: options.beautyFilter.type,
+                    intensity: options.beautyFilter.intensity || 0.5,
+                });
+            } catch (err) {
+                console.warn('[Compositor] Failed to apply beauty filter:', err);
+                // Don't let beauty filter errors break the entire compositing
+            }
+        } else {
+            console.log('[Compositor] No beauty filter to apply in none mode:', options.beautyFilter);
+        }
+
         if (options.mirror) ctx.restore();
         return;
     }
@@ -109,6 +131,21 @@ export function compositeFrame({
     }
 
     ctx.drawImage(tempCanvas, 0, 0);
+
+    // Apply beauty filters after compositing the person
+    if (options.beautyFilter && options.beautyFilter.type !== 'none') {
+        try {
+            applyBeautyFilter(outputCanvas, {
+                type: options.beautyFilter.type,
+                intensity: options.beautyFilter.intensity || 0.5,
+            });
+        } catch (err) {
+            console.warn('[Compositor] Failed to apply beauty filter:', err);
+            // Don't let beauty filter errors break the entire compositing
+        }
+    } else {
+        console.log('[Compositor] No beauty filter to apply in other modes:', options.beautyFilter);
+    }
 
     if (options.mirror) ctx.restore();
 } 

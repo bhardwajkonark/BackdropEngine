@@ -1,15 +1,31 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { WebcamManager, WebcamStatus, WebcamError } from './utils/webcam';
 import { MediaPipeLoader, DEFAULT_MEDIAPIPE_CDN } from './mediapipe/loader';
 import { preloadBackgrounds, BackgroundOption, LoadedBackground } from './utils/backgrounds';
+import { preloadBeautyFilters, BeautyFilterOption, LoadedBeautyFilter } from './types/beauty-filters';
 import { compositeFrame } from './utils/compositor';
+import { applyBeautyFilter } from './utils/beauty-filters';
 
+/**
+ * React hook for webcam background switching using MediaPipe Selfie Segmentation.
+ * 
+ * FIXED: Maximum update depth exceeded error was caused by:
+ * 1. Options object being recreated on every render in components
+ * 2. useEffect dependencies including options properties that change on every render
+ * 
+ * Solution:
+ * - Components should use useMemo to memoize options object
+ * - Hook dependencies optimized to avoid unnecessary re-runs
+ * - Callback functions optimized to prevent re-renders
+ */
 export interface UseWebcamBackgroundSwitcherOptions {
     backgrounds: BackgroundOption[];
+    beautyFilters?: BeautyFilterOption[];
     width?: number;
     height?: number;
     onError?: (err: Error | WebcamError) => void;
     defaultMode?: string;
+    defaultBeautyFilter?: string;
     modelSelection?: 0 | 1;
     blurRadius?: number;
     mirror?: boolean;
@@ -34,7 +50,7 @@ async function loadCameraUtilsScript(): Promise<void> {
 
 export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcherOptions) {
     if (options.debug) {
-        console.log('[WebcamBG Debug] Hook initialized with options:', options);
+        console.log('[WebcamBG Debug] Hook initialized');
     }
     // Refs for video and canvas
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -45,6 +61,8 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
     const [error, setError] = useState<Error | WebcamError | null>(null);
     const [currentBackground, setCurrentBackground] = useState<LoadedBackground | null>(null);
     const [availableBackgrounds, setAvailableBackgrounds] = useState<LoadedBackground[]>([]);
+    const [currentBeautyFilter, setCurrentBeautyFilter] = useState<LoadedBeautyFilter | null>(null);
+    const [availableBeautyFilters, setAvailableBeautyFilters] = useState<LoadedBeautyFilter[]>([]);
     const [modelSelection, setModelSelection] = useState<0 | 1>(options.modelSelection ?? 0);
     const [mirror, setMirror] = useState<boolean>(options.mirror ?? true);
     const [blurRadius, setBlurRadius] = useState<number>(options.blurRadius ?? 10);
@@ -61,15 +79,18 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
     // Ref for animation frame in 'none' mode
     const noneModeAnimationRef = useRef<number | null>(null);
 
+    // Memoize beauty filter options to prevent unnecessary re-renders
+    const beautyFilterOptions = useMemo(() => options.beautyFilters || [], [options.beautyFilters]);
+
     // Preload backgrounds on mount or when options.backgrounds changes
     useEffect(() => {
         if (options.debug) {
-            console.log('[WebcamBG Debug] Preloading backgrounds:', options.backgrounds);
+            console.log('[WebcamBG Debug] Preloading backgrounds');
         }
         setStatus('loading');
         preloadBackgrounds(options.backgrounds).then((loaded) => {
             if (options.debug) {
-                console.log('[WebcamBG Debug] Backgrounds loaded:', loaded);
+                console.log('[WebcamBG Debug] Backgrounds loaded');
             }
             setAvailableBackgrounds(loaded);
             // Set default background
@@ -92,7 +113,45 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                 console.log('[WebcamBG Debug] Cleanup: backgrounds effect');
             }
         };
-    }, [options.backgrounds, options.defaultMode]);
+    }, [options.backgrounds, options.defaultMode, options.debug]);
+
+    // Preload beauty filters on mount or when options.beautyFilters changes
+    useEffect(() => {
+        if (!beautyFilterOptions || beautyFilterOptions.length === 0) {
+            setAvailableBeautyFilters([]);
+            setCurrentBeautyFilter(null);
+            return;
+        }
+
+        if (options.debug) {
+            console.log('[WebcamBG Debug] Preloading beauty filters');
+        }
+
+        preloadBeautyFilters(beautyFilterOptions).then((loaded) => {
+            if (options.debug) {
+                console.log('[WebcamBG Debug] Beauty filters loaded');
+            }
+            setAvailableBeautyFilters(loaded);
+            // Set default beauty filter
+            let defaultFilter = loaded[0] || null;
+            if (options.defaultBeautyFilter) {
+                const found = loaded.find((filter) => filter.option.label === options.defaultBeautyFilter);
+                if (found) defaultFilter = found;
+            }
+            setCurrentBeautyFilter(defaultFilter);
+        }).catch((err) => {
+            if (options.debug) {
+                console.error('[WebcamBG Debug] Error preloading beauty filters:', err);
+            }
+            // Don't fail the entire hook for beauty filter errors
+            console.warn('[WebcamBG Warning] Beauty filters failed to load:', err);
+        });
+        return () => {
+            if (options.debug) {
+                console.log('[WebcamBG Debug] Cleanup: beauty filters effect');
+            }
+        };
+    }, [beautyFilterOptions, options.defaultBeautyFilter, options.debug]);
 
     // Initialize webcam and MediaPipe
     useEffect(() => {
@@ -110,24 +169,49 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
 
         async function init() {
             try {
+                if (options.debug) {
+                    console.log('[WebcamBG Debug] Starting webcam initialization...');
+                }
+
                 // Start webcam
                 const stream = await webcamManagerRef.current!.start();
                 if (options.debug) {
                     console.log('[WebcamBG Debug] Webcam stream started:', stream);
                 }
+
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    videoRef.current.play().catch(() => { });
+                    videoRef.current.play().catch((playErr) => {
+                        if (options.debug) {
+                            console.warn('[WebcamBG Debug] Video play failed:', playErr);
+                        }
+                    });
                 }
+
+                if (options.debug) {
+                    console.log('[WebcamBG Debug] Starting MediaPipe loading...');
+                }
+
                 // Load MediaPipe
                 await mediapipeLoaderRef.current!.load();
                 if (options.debug) {
-                    console.log('[WebcamBG Debug] MediaPipe loaded');
+                    console.log('[WebcamBG Debug] MediaPipe loaded successfully');
                 }
-                if (isMounted) setStatus('ready');
+
+                if (isMounted) {
+                    if (options.debug) {
+                        console.log('[WebcamBG Debug] Setting status to ready');
+                    }
+                    setStatus('ready');
+                }
             } catch (err: any) {
                 if (options.debug) {
                     console.error('[WebcamBG Debug] Error initializing webcam/MediaPipe:', err);
+                    console.error('[WebcamBG Debug] Error details:', {
+                        name: err.name,
+                        message: err.message,
+                        stack: err.stack
+                    });
                 }
                 setError(err);
                 setStatus('error');
@@ -143,7 +227,7 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                 console.log('[WebcamBG Debug] Cleanup: webcam/mediapipe effect');
             }
         };
-    }, [options.cdnUrl, modelSelection]);
+    }, [options.cdnUrl, modelSelection, options.debug]);
 
     // Compositing loop (replaced with MediaPipe Camera utility)
     useEffect(() => {
@@ -204,6 +288,21 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                     canvas.height = video.videoHeight;
                     if (ctx) {
                         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Apply beauty filters in none mode
+                        if (currentBeautyFilter && currentBeautyFilter.option.type !== 'none') {
+                            try {
+                                if (options.debug) {
+                                    console.log('[WebcamBG Debug] Applying beauty filter in none mode draw loop:', currentBeautyFilter.option);
+                                }
+                                applyBeautyFilter(canvas, {
+                                    type: currentBeautyFilter.option.type,
+                                    intensity: currentBeautyFilter.option.intensity || 0.5,
+                                });
+                            } catch (err) {
+                                console.warn('[WebcamBG Debug] Failed to apply beauty filter in none mode:', err);
+                            }
+                        }
                     }
                     noneModeAnimationRef.current = requestAnimationFrame(drawFrame);
                 };
@@ -312,6 +411,16 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
             selfieSegmentation.onResults((results: any) => {
                 if (stopped) return;
                 if (results.segmentationMask) {
+                    const beautyFilterOptions = currentBeautyFilter ? {
+                        type: currentBeautyFilter.option.type,
+                        intensity: currentBeautyFilter.option.intensity || 0.5,
+                    } : undefined;
+
+                    if (options.debug) {
+                        console.log('[WebcamBG Debug] Current beauty filter:', currentBeautyFilter);
+                        console.log('[WebcamBG Debug] Beauty filter options being passed:', beautyFilterOptions);
+                    }
+
                     compositeFrame({
                         inputImage: video,
                         segmentationMask: results.segmentationMask,
@@ -321,6 +430,7 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                             blurRadius,
                             backgroundImage: bg?.image,
                             mirror,
+                            beautyFilter: beautyFilterOptions,
                         },
                     });
                 } else if (options.debug) {
@@ -349,7 +459,7 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
                 console.log('[WebcamBG Debug] Cleanup: MediaPipe Camera effect');
             }
         };
-    }, [status, currentBackground, blurRadius, mirror, options.frameSkip, options.width, options.height]);
+    }, [status, currentBackground, currentBeautyFilter, blurRadius, mirror, options.frameSkip, options.width, options.height]);
 
     // API methods
     const setBackground = useCallback((bg: LoadedBackground) => {
@@ -365,31 +475,42 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
         }
         lastBgChangeRef.current = now;
         setCurrentBackground(bg);
-    }, [options.debug]);
+    }, []);
     const setModel = useCallback((model: 0 | 1) => {
         if (options.debug) {
             console.log('[WebcamBG Debug] setModel called:', model);
         }
         setModelSelection(model);
         mediapipeLoaderRef.current?.setModelSelection(model);
-    }, [options.debug]);
+    }, []);
     const setMirrorMode = useCallback((val: boolean) => {
         if (options.debug) {
             console.log('[WebcamBG Debug] setMirror called:', val);
         }
         setMirror(val);
-    }, [options.debug]);
+    }, []);
     const setBlur = useCallback((val: number) => {
         if (options.debug) {
             console.log('[WebcamBG Debug] setBlurRadius called:', val);
         }
         setBlurRadius(val);
+    }, []);
+
+    const setBeautyFilter = useCallback((filter: LoadedBeautyFilter) => {
+        if (options.debug) {
+            console.log('[WebcamBG Debug] setBeautyFilter called:', filter);
+        }
+        setCurrentBeautyFilter(filter);
+        if (options.debug) {
+            console.log('[WebcamBG Debug] Beauty filter state updated to:', filter);
+        }
     }, [options.debug]);
 
     return {
         videoRef,
         canvasRef,
         setBackground,
+        setBeautyFilter,
         setModel,
         setMirror: setMirrorMode,
         setBlurRadius: setBlur,
@@ -397,6 +518,8 @@ export function useWebcamBackgroundSwitcher(options: UseWebcamBackgroundSwitcher
         error,
         currentBackground,
         availableBackgrounds,
+        currentBeautyFilter,
+        availableBeautyFilters,
         modelSelection,
         mirror,
         blurRadius,

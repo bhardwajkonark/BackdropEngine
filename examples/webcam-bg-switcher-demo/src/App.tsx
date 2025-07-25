@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 // @ts-ignore: Local symlinked package for demo purposes
 import { useWebcamBackgroundSwitcher } from 'backdrop-engine';
 const backgrounds = [
@@ -14,57 +14,107 @@ const backgrounds = [
   { label: 'River', type: 'image' as const, src: 'https://images.unsplash.com/photo-1593132808462-578ca7a387d9?auto=format&fit=crop&w=800&q=80' },
   { label: 'Sky', type: 'image' as const, src: 'https://images.unsplash.com/photo-1470434158598-88e7ad324132?auto=format&fit=crop&w=800&q=80' },
   { label: 'Sunset', type: 'image' as const, src: 'https://images.unsplash.com/photo-1503803548695-c2a7b4a5b875?auto=format&fit=crop&w=800&q=80' },
-
 ];
 
+// Beauty filter options (moved inside component to avoid unused variable warning)
+
 function App() {
+  // Memoize beauty filters to prevent unnecessary re-renders
+  const memoizedBeautyFilters = useMemo(() => [
+    { label: 'None', type: 'none' as const },
+    { label: 'Skin Smoothing', type: 'skin-smoothing' as const, intensity: 0.7 },
+    { label: 'Brightness & Contrast', type: 'brightness-contrast' as const, intensity: 0.6 },
+    { label: 'Highlight', type: 'highlight' as const, intensity: 0.5 },
+    { label: 'Soft Glow', type: 'soft-glow' as const, intensity: 0.6 },
+    { label: 'Sharpen', type: 'sharpen' as const, intensity: 0.5 },
+    { label: 'Color Boost', type: 'color-boost' as const, intensity: 0.7 },
+  ], []);
+
   const {
     canvasRef,
     videoRef,
     setBackground,
+    setBeautyFilter,
     status,
     error,
     currentBackground,
     availableBackgrounds,
+    currentBeautyFilter,
+    availableBeautyFilters,
   } = useWebcamBackgroundSwitcher({
     backgrounds,
+    beautyFilters: memoizedBeautyFilters,
     width: 640,
     height: 480,
     onError: (err: Error | { type: string; message: string }) => {
+      console.error('Hook error:', err);
       if ('message' in err) {
         console.error(err.message);
       } else {
         console.error(err);
       }
     },
-    debug: true,
+    debug: false,
     frameSkip: 2,
     blurRadius: 10,
     mirror: false,
   });
 
+  // Show error if any
+  if (error) {
+    console.error('Demo error:', error);
+  }
+
   return (
     <div style={{ padding: 16, fontFamily: 'sans-serif', maxWidth: 800, margin: '0 auto' }}>
       <h1 style={{ fontSize: '2rem', textAlign: 'center' }}>Webcam Background Switcher Demo</h1>
-      <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {availableBackgrounds.map((bg: any) => (
-          <button
-            key={bg.option.label}
-            onClick={() => setBackground(bg)}
-            style={{
-              margin: 4,
-              padding: '8px 16px',
-              background: currentBackground?.option.label === bg.option.label ? '#1976d2' : '#eee',
-              color: currentBackground?.option.label === bg.option.label ? '#fff' : '#222',
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-              fontSize: 16,
-            }}
-          >
-            {bg.option.label}
-          </button>
-        ))}
+
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ textAlign: 'center', marginBottom: 8 }}>Backgrounds</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {availableBackgrounds.map((bg: any) => (
+            <button
+              key={bg.option.label}
+              onClick={() => setBackground(bg)}
+              style={{
+                margin: 4,
+                padding: '8px 16px',
+                background: currentBackground?.option.label === bg.option.label ? '#1976d2' : '#eee',
+                color: currentBackground?.option.label === bg.option.label ? '#fff' : '#222',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 16,
+              }}
+            >
+              {bg.option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ textAlign: 'center', marginBottom: 8 }}>Beauty Filters</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {availableBeautyFilters.map((filter: any) => (
+            <button
+              key={filter.option.label}
+              onClick={() => setBeautyFilter(filter)}
+              style={{
+                margin: 4,
+                padding: '8px 16px',
+                background: currentBeautyFilter?.option.label === filter.option.label ? '#e91e63' : '#eee',
+                color: currentBeautyFilter?.option.label === filter.option.label ? '#fff' : '#222',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 16,
+              }}
+            >
+              {filter.option.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div
         style={{
@@ -140,7 +190,7 @@ function App() {
         )}
       </div>
       <p style={{ marginTop: 24, color: '#888', textAlign: 'center' }}>
-        Try switching backgrounds above. This demo uses the local webcam background switcher package.
+        Try switching backgrounds and beauty filters above. This demo uses the local webcam background switcher package with beauty filter support.
       </p>
       <style>{`
         @media (max-width: 700px) {

@@ -8,6 +8,7 @@ A reusable React hook and utility package for real-time webcam background switch
 
 - Real-time person segmentation using MediaPipe
 - Blur or replace webcam background with custom images
+- **Real-time beauty filters** with 7 different effects
 - **No UI imposed** – you control the look and feel
 - Exposes hooks and methods for full flexibility
 - TypeScript support
@@ -94,6 +95,73 @@ function MyCustomUI() {
 }
 ```
 
+### Beauty Filters Example
+
+The hook also supports real-time beauty filters that work independently of background effects:
+
+```jsx
+const beautyFilters = [
+  { label: "None", type: "none" },
+  { label: "Skin Smoothing", type: "skin-smoothing", intensity: 0.7 },
+  { label: "Brightness & Contrast", type: "brightness-contrast", intensity: 0.6 },
+  { label: "Highlight", type: "highlight", intensity: 0.5 },
+  { label: "Soft Glow", type: "soft-glow", intensity: 0.6 },
+  { label: "Sharpen", type: "sharpen", intensity: 0.5 },
+  { label: "Color Boost", type: "color-boost", intensity: 0.7 },
+];
+
+function MyCustomUI() {
+  const {
+    canvasRef,
+    videoRef,
+    setBackground,
+    setBeautyFilter, // New beauty filter setter
+    status,
+    error,
+    currentBackground,
+    availableBackgrounds,
+    currentBeautyFilter, // Current active beauty filter
+    availableBeautyFilters, // Available beauty filters
+  } = useWebcamBackgroundSwitcher({
+    backgrounds,
+    beautyFilters, // Add beauty filters to options
+    width: 640,
+    height: 480,
+    onError: (err) => console.error(err),
+    debug: false,
+  });
+
+  return (
+    <div>
+      {/* Background controls */}
+      <div>
+        <h3>Backgrounds</h3>
+        {availableBackgrounds.map((bg) => (
+          <button key={bg.option.label} onClick={() => setBackground(bg)}>
+            {bg.option.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Beauty filter controls */}
+      <div>
+        <h3>Beauty Filters</h3>
+        {availableBeautyFilters.map((filter) => (
+          <button key={filter.option.label} onClick={() => setBeautyFilter(filter)}>
+            {filter.option.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Video output */}
+      <video ref={videoRef} style={{ display: "none" }} autoPlay muted playsInline />
+      <canvas ref={canvasRef} width={640} height={480} />
+      {status === "error" && <div>Error: {error?.message}</div>}
+    </div>
+  );
+}
+```
+
 ### Next.js Usage
 
 For SSR safety, ensure the hook/component is only used on the client:
@@ -112,6 +180,7 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 | Option        | Type     | Description                                                                 |
 | ------------- | -------- | --------------------------------------------------------------------------- |
 | backgrounds   | array    | List of background options (see below)                                      |
+| beautyFilters | array    | List of beauty filter options (see below)                                   |
 | width         | number   | Video/canvas width (default: 640)                                           |
 | height        | number   | Video/canvas height (default: 480)                                          |
 | onError       | function | Callback for errors (webcam, image, segmentation)                           |
@@ -130,6 +199,7 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 | canvasRef            | ref                 | Attach to your `<canvas>` element                   |
 | videoRef             | ref                 | Attach to your `<video>` element                    |
 | setBackground        | function            | Switch background (pass a LoadedBackground object)  |
+| setBeautyFilter      | function            | Switch beauty filter (pass a LoadedBeautyFilter object) |
 | setModel             | function            | Switch MediaPipe model (0 or 1)                     |
 | setMirror            | function            | Enable/disable mirroring                            |
 | setBlurRadius        | function            | Set blur radius for 'blur' mode                     |
@@ -137,6 +207,8 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 | error                | object              | Error object if any                                 |
 | currentBackground    | LoadedBackground    | The currently active background                     |
 | availableBackgrounds | LoadedBackground[]  | List of all available backgrounds                   |
+| currentBeautyFilter  | LoadedBeautyFilter  | The currently active beauty filter                  |
+| availableBeautyFilters | LoadedBeautyFilter[] | List of all available beauty filters               |
 | modelSelection       | 0 \| 1              | Current MediaPipe model selection                   |
 | mirror               | boolean             | Current mirror mode                                 |
 | blurRadius           | number              | Current blur radius                                 |
@@ -147,6 +219,27 @@ const MyCustomUI = dynamic(() => import("./MyCustomUI"), { ssr: false });
 { label: 'Blur', type: 'blur' }
 { label: 'Beach', type: 'image', src: '/beach.jpg' }
 ```
+
+### Beauty Filter Option Format
+
+```js
+{ label: 'None', type: 'none' }
+{ label: 'Skin Smoothing', type: 'skin-smoothing', intensity: 0.7 }
+{ label: 'Brightness & Contrast', type: 'brightness-contrast', intensity: 0.6 }
+{ label: 'Highlight', type: 'highlight', intensity: 0.5 }
+{ label: 'Soft Glow', type: 'soft-glow', intensity: 0.6 }
+{ label: 'Sharpen', type: 'sharpen', intensity: 0.5 }
+{ label: 'Color Boost', type: 'color-boost', intensity: 0.7 }
+```
+
+**Available Beauty Filter Types:**
+- `none` - No beauty filter applied
+- `skin-smoothing` - Gentle blur for skin texture (intensity: 0.0-1.0)
+- `brightness-contrast` - Light and contrast adjustment (intensity: 0.0-1.0)
+- `highlight` - Radial highlight for eyes/cheeks (intensity: 0.0-1.0)
+- `soft-glow` - Warm, flattering lighting (intensity: 0.0-1.0)
+- `sharpen` - Edge enhancement for crisp details (intensity: 0.0-1.0)
+- `color-boost` - Vibrant saturation boost (intensity: 0.0-1.0)
 
 ### LoadedBackground Structure
 
@@ -163,6 +256,20 @@ A `LoadedBackground` object has the following shape:
 
 Use the `option.label` as a unique key for UI purposes. Pass the entire `LoadedBackground` object to `setBackground`.
 
+### LoadedBeautyFilter Structure
+
+A `LoadedBeautyFilter` object has the following shape:
+
+```ts
+{
+  option: { label: string; type: 'none' | 'skin-smoothing' | 'brightness-contrast' | 'highlight' | 'soft-glow' | 'sharpen' | 'color-boost'; intensity?: number };
+  isReady: boolean;
+  error?: Error;
+}
+```
+
+Use the `option.label` as a unique key for UI purposes. Pass the entire `LoadedBeautyFilter` object to `setBeautyFilter`.
+
 ---
 
 ## How It Works
@@ -170,6 +277,7 @@ Use the `option.label` as a unique key for UI purposes. Pass the entire `LoadedB
 - Requests webcam access and displays the video feed (hidden or shown as you wish).
 - Uses MediaPipe Selfie Segmentation to separate the person from the background in real time.
 - Allows you to blur the background or replace it with a custom image.
+- **Applies real-time beauty filters** using GPU-accelerated canvas operations and CSS filters.
 - Renders the composited output to a canvas you control.
 - You build and style your own UI and controls.
 
@@ -218,6 +326,48 @@ This package supports the following background modes:
 - **Description:** The background is replaced with a custom image of your choice.
 - **Performance:** Slightly more resource-intensive than blur, especially with high-resolution images, but still efficient with frame skipping and model selection.
 - **Use Case:** Virtual backgrounds, branding, fun effects.
+
+---
+
+## Beauty Filters
+
+This package supports 7 different real-time beauty filters that work independently of background effects:
+
+### 1. Skin Smoothing
+- **Description:** Applies a gentle Gaussian blur to smooth skin texture and reduce blemishes.
+- **Performance:** Uses GPU-accelerated CSS filters for optimal performance.
+- **Use Case:** Portrait enhancement, professional appearance.
+
+### 2. Brightness & Contrast
+- **Description:** Adjusts overall brightness and contrast for better lighting.
+- **Performance:** Fast CSS-based adjustments.
+- **Use Case:** Poor lighting conditions, enhancing visibility.
+
+### 3. Highlight
+- **Description:** Adds a subtle radial highlight to central areas (eyes, cheeks).
+- **Performance:** Efficient gradient-based effect.
+- **Use Case:** Adding dimension and glow to facial features.
+
+### 4. Soft Glow
+- **Description:** Creates a warm, flattering lighting effect.
+- **Performance:** Optimized canvas compositing.
+- **Use Case:** Creating a more appealing, professional appearance.
+
+### 5. Sharpen
+- **Description:** Enhances edge details for crisper, clearer images.
+- **Performance:** Uses overlay blending for sharpening effect.
+- **Use Case:** Improving image clarity and definition.
+
+### 6. Color Boost
+- **Description:** Increases color saturation for more vibrant appearance.
+- **Performance:** Fast CSS-based color adjustments.
+- **Use Case:** Making colors pop, enhancing visual appeal.
+
+### 7. None
+- **Description:** No beauty filter applied, shows original video feed.
+- **Use Case:** When users want to disable beauty effects.
+
+**Note:** Beauty filters work independently of background effects, so you can combine any beauty filter with any background mode.
 
 ---
 
@@ -426,11 +576,13 @@ BackdropEngine exports all its types for TypeScript users. You can import them d
 import type {
   UseWebcamBackgroundSwitcherOptions,
   BackgroundOption,
-  LoadedBackground
+  LoadedBackground,
+  BeautyFilterOption,
+  LoadedBeautyFilter
 } from 'backdrop-engine';
 ```
 
-This allows you to type your options, backgrounds, and more for full type safety.
+This allows you to type your options, backgrounds, beauty filters, and more for full type safety.
 
 ---
 
